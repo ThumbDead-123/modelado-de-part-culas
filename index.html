@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Recorrido VR en un Mundo Interactivo</title>
+    <!-- Incluir A-Frame -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <!-- Incluir A-Frame Extras para efectos de partículas -->
+    <script src="https://unpkg.com/aframe-extras@6.1.0/dist/aframe-extras.min.js"></script>
+    <!-- Incluir Speech Synthesis API para audio narrativo -->
+    <script>
+      // Función para narrar texto en voz alta
+      function narrar(texto) {
+        const speech = new SpeechSynthesisUtterance(texto);
+        speech.lang = "es-ES";
+        window.speechSynthesis.speak(speech);
+      }
+
+      // Función para generar rotaciones aleatorias
+      function generarRotacionAleatoria() {
+        return {
+          x: Math.random() * 360,
+          y: Math.random() * 360,
+          z: Math.random() * 360
+        };
+      }
+    </script>
+  </head>
+
+  <body>
+    <!-- Escena A-Frame -->
+    <a-scene background="color: #000000" vr-mode-ui="enabled: true" shadow="type: pcfsoft">
+      
+      <!-- Añadir el cielo esférico con la imagen mundo.jpg -->
+      <a-sky src="#mundo-textura" radius="100"></a-sky>
+
+      <!-- Pantalla de instrucciones -->
+      <a-entity id="instrucciones" position="0 1.5 -3" visible="true">
+        <a-plane width="4" height="2" color="#ffffff" opacity="0.9" position="0 0 0"></a-plane>
+        <a-text value="Instrucciones:\n\nUtiliza las teclas WASD para moverte.\nMira hacia los objetos para interactuar.\n\nPresiona 'Saltar' para comenzar." color="#000000" position="0 0.5 0.01" align="center" scale="0.5 0.5 0.5"></a-text>
+        <a-plane id="botonSaltar" position="0 -0.5 0.01" width="1.5" height="0.5" color="#ff0000" text="value: Saltar; align: center; color: #ffffff"></a-plane>
+      </a-entity>
+
+      <!-- Texto inicial de bienvenida -->
+      <a-text value="fructosa" color="#FFFFFF" position="0 4 -10" align="center" scale="4 4 4" shadow="cast: true"></a-text>
+
+      <!-- Modelo de la molécula -->
+      <a-entity id="molecula" obj-model="obj: #molecula-obj; mtl: #molecula-mtl" position="0 1.5 -5" scale="0.2 0.2 0.2" shadow="cast: true; receive: true" rotation="0 45 0"></a-entity>
+
+      <!-- Añadir un piso circular debajo de la molécula -->
+      <a-circle position="0 -2 -5" rotation="-90 0 0" radius="2" color="#7CFC00" shadow="receive: true"></a-circle>
+
+      <!-- Efectos de partículas configurables -->
+      <a-entity id="particulas" position="0 2 -5" particle-system="
+        preset: dust; 
+        color: #ff0000, #00ff00, #0000ff; 
+        particleCount: 500; 
+        size: 1.5; 
+        velocityValue: 0 2 0;
+        opacity: 0.6;
+        randomizeVelocity: true;
+        duration: 15000;
+        maxAge: 10;
+        texture: https://cdn.aframe.io/360-image-gallery-boilerplate/img/star.png
+        ">
+      </a-entity>
+
+      <!-- Definir los assets (archivos) -->
+      <a-assets>
+        <a-asset-item id="molecula-obj" src="fructosa.obj"></a-asset-item>
+        <a-asset-item id="molecula-mtl" src="fructosa.mtl"></a-asset-item>
+        <!-- Añadir la imagen de fondo para el cielo -->
+        <img id="mundo-textura" src="mundo.jpg">
+      </a-assets>
+
+      <!-- Luces -->
+      <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
+      <a-light type="point" color="#ffffff" intensity="1" position="2 4 -3" distance="15"></a-light>
+
+      <!-- Luz cálida que se encenderá con el botón -->
+      <a-light id="spotLight" type="spot" color="#ffdd99" position="-5 4 -3" intensity="2" target="#molecula" angle="100" distance="15" decay="2" shadow="cast: true"></a-light>
+
+      <!-- Botones de control -->
+      <a-plane id="boton" position="-1.5 1.5 -1" width="0.5" height="0.3" color="#ff0000" shadow="cast: true" text="value: Pausar/Reanudar; align: center; color: #ffffff"></a-plane>
+      <a-plane id="botonLuz" position="1.5 1.5 -1" width="0.5" height="0.3" color="#00ff00" shadow="cast: true" text="value: Luz Cálida; align: center; color: #ffffff"></a-plane>
+      <a-plane id="botonZoom" position="0 0.5 -1" width="0.5" height="0.3" color="#0000ff" shadow="cast: true" text="value: Zoom; align: center; color: #ffffff"></a-plane>
+      <a-plane id="botonUltraZoom" position="0.7 0.5 -1" width="0.5" height="0.3" color="#ff00ff" shadow="cast: true" text="value: Ultra Zoom; align: center; color: #ffffff"></a-plane>
+      <a-plane id="botonInfo" position="1.5 0.5 -1" width="0.5" height="0.3" color="#ffff00" shadow="cast: true" text="value: Información; align: center; color: #000000"></a-plane>
+
+      <!-- Texto de información de la molécula -->
+      <a-entity id="infoTexto" position="0 0 -2" visible="false">
+        <a-plane width="3" height="1" color="#000000" opacity="0.8"></a-plane>
+        <a-text value="Fructosa:\nC6H12O6\nEs un monosacárido que se encuentra en las frutas.\nEs una fuente importante de energía." color="#ffffff" align="center" position="0 0 0.1"></a-text>
+      </a-entity>
+
+      <!-- Cámara con controles desactivados inicialmente -->
+      <a-camera id="camera" position="0 1.6 0" wasd-controls="enabled: false" look-controls="enabled: true">
+        <a-cursor></a-cursor>
+      </a-camera>
+
+      <!-- Script para manejar la interacción -->
+      <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          const molecula = document.getElementById('molecula');
+          const boton = document.getElementById('boton');
+          const botonLuz = document.getElementById('botonLuz');
+          const botonZoom = document.getElementById('botonZoom');
+          const botonUltraZoom = document.getElementById('botonUltraZoom');
+          const botonInfo = document.getElementById('botonInfo');
+          const botonSaltar = document.getElementById('botonSaltar');
+          const spotLight = document.getElementById('spotLight');
+          const instrucciones = document.getElementById('instrucciones');
+          const camera = document.getElementById('camera');
+          const infoTexto = document.getElementById('infoTexto');
+          let rotando = true;
+          let luzEncendida = false;
+          let zoomActivado = false;
+          let ultraZoomActivado = false;
+          let infoVisible = false;
+          let intervalId;
+
+          // Función para aplicar rotaciones aleatorias
+          function rotarAleatoriamente() {
+            const nuevaRotacion = generarRotacionAleatoria();
+            molecula.setAttribute('animation__rotate', `property: rotation; to: ${nuevaRotacion.x} ${nuevaRotacion.y} ${nuevaRotacion.z}; dur: 3000; easing: easeInOutSine; loop: false`);
+          }
+
+          // Iniciar la rotación al cargar
+          function iniciarRotacion() {
+            intervalId = setInterval(rotarAleatoriamente, 3000);
+            rotarAleatoriamente();
+          }
+          iniciarRotacion();
+
+          // Pausar la rotación
+          function pausarRotacion() {
+            clearInterval(intervalId);
+            molecula.removeAttribute('animation__rotate');
+          }
+
+          // Alternar entre pausar y reanudar rotación
+          function alternarRotacion() {
+            if (rotando) {
+              pausarRotacion();
+            } else {
+              iniciarRotacion();
+            }
+            rotando = !rotando;
+          }
+          boton.addEventListener('click', alternarRotacion);
+
+          // Función para alternar la luz cálida
+          function alternarLuz() {
+            if (luzEncendida) {
+              spotLight.setAttribute('intensity', '0'); // Apagar luz cálida
+            } else {
+              spotLight.setAttribute('intensity', '2'); // Luz cálida encendida
+            }
+            luzEncendida = !luzEncendida;
+          }
+          botonLuz.addEventListener('click', alternarLuz);
+
+          // Función para hacer zoom al objeto
+          function alternarZoom() {
+            if (zoomActivado) {
+              molecula.setAttribute('scale', '0.2 0.2 0.2'); // Tamaño original
+            } else {
+              molecula.setAttribute('scale', '0.5 0.5 0.5'); // Tamaño aumentado (zoom)
+            }
+            zoomActivado = !zoomActivado;
+          }
+          botonZoom.addEventListener('click', alternarZoom);
+
+          // Función para activar ultra zoom al objeto
+          function alternarUltraZoom() {
+            if (ultraZoomActivado) {
+              molecula.setAttribute('scale', '0.2 0.2 0.2'); // Tamaño original
+            } else {
+              molecula.setAttribute('scale', '1 1 1'); // Ultra zoom (aún más grande)
+            }
+            ultraZoomActivado = !ultraZoomActivado;
+          }
+          botonUltraZoom.addEventListener('click', alternarUltraZoom);
+
+          // Función para mostrar/ocultar la información
+          function alternarInfo() {
+            if (infoVisible) {
+              infoTexto.setAttribute('visible', 'false');
+            } else {
+              infoTexto.setAttribute('visible', 'true');
+            }
+            infoVisible = !infoVisible;
+          }
+          botonInfo.addEventListener('click', alternarInfo);
+
+          // Función para iniciar el recorrido (habilitar controles y ocultar instrucciones)
+          function saltarInstrucciones() {
+            instrucciones.setAttribute('visible', 'false');
+            camera.setAttribute('wasd-controls', 'enabled: true');
+          }
+          botonSaltar.addEventListener('click', saltarInstrucciones);
+
+          // Narrar la introducción
+          narrar("Bienvenidos a la experiencia 360. Recorre el mundo de la fructosa mientras exploras el entorno.");
+        });
+      </script>
+
+    </a-scene>
+  </body>
+</html>
